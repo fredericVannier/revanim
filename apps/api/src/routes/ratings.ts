@@ -34,7 +34,7 @@ export const ratingsRoutes: FastifyPluginAsync = async (app) => {
     });
 
     const avg = ratings.length
-      ? ratings.reduce((acc, r) => acc + r.score, 0) / ratings.length
+      ? ratings.reduce((acc: number, r: { score: number }) => acc + r.score, 0) / ratings.length
       : null;
 
     return { ratings, average: avg, count: ratings.length };

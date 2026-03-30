@@ -1,4 +1,5 @@
-import { PrismaClient, AnimeStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import type { AnimeStatus } from '@prisma/client';
 import Redis from 'ioredis';
 import { anilistClient, GET_ANIME, SEARCH_ANIMES, GET_TOP_ANIMES } from '../lib/anilist-client';
 

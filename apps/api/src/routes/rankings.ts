@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { RankingType } from '@prisma/client';
+import type { RankingType } from '@prisma/client';
 
 export const rankingsRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/rankings?type=WEEKLY&limit=50

@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireAuth } from '../plugins/clerk';
-import { ListType } from '@prisma/client';
+import type { ListType } from '@prisma/client';
 
 const listSchema = z.object({
   animeId: z.string(),
