@@ -1,19 +1,21 @@
 import type { FastifyPluginAsync } from 'fastify';
-import type { RankingType } from '@prisma/client';
+import { z } from 'zod';
+
+const rankingQuerySchema = z.object({
+  type: z.enum(['WEEKLY', 'ALL_TIME']).default('ALL_TIME'),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
 
 export const rankingsRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/rankings?type=WEEKLY&limit=50
-  app.get<{ Querystring: { type?: RankingType; limit?: string } }>('/', async (request) => {
-    const type = request.query.type ?? 'ALL_TIME';
-    const limit = Math.min(parseInt(request.query.limit ?? '50'), 100);
-
+  app.get('/', async (request, reply) => {
+    const { type, limit } = rankingQuerySchema.parse(request.query);
     const rankings = await app.prisma.ranking.findMany({
       where: { type },
       include: { anime: { select: { id: true, title: true, coverImage: true, score: true, genres: true } } },
       orderBy: { position: 'asc' },
       take: limit,
     });
-
     return rankings;
   });
 };

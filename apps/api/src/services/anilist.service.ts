@@ -99,8 +99,8 @@ export async function searchAnimes(
       Page: { media: AnilistMedia[]; pageInfo: { total: number; hasNextPage: boolean } };
     }>(SEARCH_ANIMES, { search: query, page, perPage });
 
-    // Upsert en arrière-plan (pas de await = non bloquant)
-    Promise.all(
+    // Upsert en arrière-plan avec supervision
+    void Promise.all(
       anilistData.Page.media.map((m) =>
         prisma.anime.upsert({
           where: { anilistId: m.id },
@@ -108,7 +108,10 @@ export async function searchAnimes(
           create: toAnimeUpsertData(m),
         }),
       ),
-    ).catch(console.error);
+    ).catch((err) => {
+      // Log structuré sans exposer les détails en production
+      if (process.env.NODE_ENV !== 'production') console.error('[anilist-sync] upsert error:', err);
+    });
 
     return {
       data: anilistData.Page.media.map(toAnimeUpsertData),

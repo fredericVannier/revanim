@@ -1,6 +1,9 @@
 import { useAuth } from '@clerk/clerk-expo';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+if (!BASE_URL) {
+  throw new Error('EXPO_PUBLIC_API_URL est requis');
+}
 
 export function useApi() {
   const { getToken } = useAuth();

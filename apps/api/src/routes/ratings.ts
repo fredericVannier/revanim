@@ -7,6 +7,11 @@ const createRatingSchema = z.object({
   score: z.number().int().min(1).max(5),
 });
 
+const ratingsQuerySchema = z.object({
+  animeId: z.string().min(1).max(100),
+  page: z.coerce.number().int().min(1).max(1000).default(1),
+});
+
 export const ratingsRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/ratings
   app.post('/', { preHandler: requireAuth }, async (request, reply) => {
@@ -24,19 +29,32 @@ export const ratingsRoutes: FastifyPluginAsync = async (app) => {
     return reply.status(201).send(rating);
   });
 
-  // GET /api/ratings?animeId=xxx
-  app.get<{ Querystring: { animeId: string } }>('/', async (request) => {
-    const { animeId } = request.query;
+  // GET /api/ratings?animeId=xxx&page=1
+  app.get('/', async (request) => {
+    const { animeId, page } = ratingsQuerySchema.parse(request.query);
+    const perPage = 20;
 
-    const ratings = await app.prisma.rating.findMany({
-      where: { animeId },
-      include: { user: { select: { username: true, avatar: true } } },
-    });
+    const [ratings, aggregate] = await app.prisma.$transaction([
+      app.prisma.rating.findMany({
+        where: { animeId },
+        include: { user: { select: { username: true, avatar: true } } },
+        skip: (page - 1) * perPage,
+        take: perPage,
+        orderBy: { createdAt: 'desc' },
+      }),
+      app.prisma.rating.aggregate({
+        where: { animeId },
+        _avg: { score: true },
+        _count: { score: true },
+      }),
+    ]);
 
-    const avg = ratings.length
-      ? ratings.reduce((acc: number, r: { score: number }) => acc + r.score, 0) / ratings.length
-      : null;
-
-    return { ratings, average: avg, count: ratings.length };
+    return {
+      ratings,
+      average: aggregate._avg.score,
+      count: aggregate._count.score,
+      page,
+      hasNextPage: page * perPage < aggregate._count.score,
+    };
   });
 };

@@ -1,5 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { prismaPlugin } from './plugins/prisma';
 import { clerkPlugin } from './plugins/clerk';
 import { redisPlugin } from './plugins/redis';
@@ -14,8 +16,22 @@ const app = Fastify({ logger: true });
 
 async function bootstrap() {
   await app.register(cors, {
-    origin: true,
+    origin: process.env.NODE_ENV === 'production'
+      ? (process.env.ALLOWED_ORIGINS?.split(',') ?? [])
+      : ['http://localhost:8081', 'http://localhost:3000', 'http://localhost:4000'],
     credentials: true,
+  });
+
+  await app.register(helmet, { global: true });
+
+  await app.register(rateLimit, {
+    global: true,
+    max: 100,
+    timeWindow: '1 minute',
+    errorResponseBuilder: () => ({
+      error: 'Trop de requêtes, réessaie dans une minute',
+      statusCode: 429,
+    }),
   });
 
   // Plugins

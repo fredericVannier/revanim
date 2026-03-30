@@ -12,6 +12,7 @@
 - Langues supportées : FR / EN / ES
 - Statut : En développement actif
 - GitHub : `github.com/fredericVannier/revanim`
+- API production : `https://revanim-production.up.railway.app`
 
 ---
 

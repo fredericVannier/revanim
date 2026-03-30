@@ -11,23 +11,15 @@ const updateProfileSchema = z.object({
 export const usersRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/users/me
   app.get('/me', { preHandler: requireAuth }, async (request, reply) => {
-    const user = await app.prisma.user.findUnique({
+    const user = await app.prisma.user.upsert({
       where: { clerkId: request.userId! },
+      update: {},
+      create: { clerkId: request.userId!, username: `user_${Date.now()}` },
       include: {
         badges: { include: { badge: true } },
         _count: { select: { ratings: true, animeList: true } },
       },
     });
-
-    if (!user) {
-      // Premier accès : crée le profil utilisateur
-      const newUser = await app.prisma.user.create({
-        data: { clerkId: request.userId!, username: `user_${Date.now()}` },
-        include: { badges: { include: { badge: true } } },
-      });
-      return newUser;
-    }
-
     return user;
   });
 
@@ -38,23 +30,29 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
     const user = await app.prisma.user.update({
       where: { clerkId: request.userId! },
       data: body,
+      select: {
+        id: true, username: true, avatar: true, bio: true, createdAt: true,
+      },
     });
 
     return user;
   });
 
   // GET /api/users/:username (profil public)
-  app.get<{ Params: { username: string } }>('/:username', async (request) => {
+  app.get<{ Params: { username: string } }>('/:username', async (request, reply) => {
     const user = await app.prisma.user.findUnique({
       where: { username: request.params.username },
-      include: {
+      select: {
+        id: true,
+        username: true,
+        avatar: true,
+        bio: true,
+        createdAt: true,
         badges: { include: { badge: true } },
         _count: { select: { ratings: true } },
       },
     });
-
-    if (!user) throw { statusCode: 404, message: 'Utilisateur introuvable' };
-
+    if (!user) return reply.status(404).send({ error: 'Utilisateur introuvable' });
     return user;
   });
 };

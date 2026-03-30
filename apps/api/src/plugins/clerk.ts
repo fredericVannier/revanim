@@ -26,7 +26,7 @@ const clerkPlugin: FastifyPluginAsync = fp(async (app) => {
 // Middleware pour les routes protégées
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
   if (!request.userId) {
-    reply.status(401).send({ error: 'Non authentifié' });
+    return reply.status(401).send({ error: 'Non authentifié' });
   }
 }
 

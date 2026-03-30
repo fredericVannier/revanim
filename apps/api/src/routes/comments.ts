@@ -7,11 +7,17 @@ const createCommentSchema = z.object({
   content: z.string().min(1).max(1000),
 });
 
+const commentsQuerySchema = z.object({
+  animeId: z.string().min(1).max(100),
+  page: z.coerce.number().int().min(1).max(1000).default(1),
+});
+
 export const commentsRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/comments?animeId=xxx&page=1
-  app.get<{ Querystring: { animeId: string; page?: string } }>('/', async (request) => {
-    const animeId = request.query.animeId;
-    const page = parseInt(request.query.page ?? '1');
+  app.get('/', async (request) => {
+    const query = commentsQuerySchema.parse(request.query);
+    const animeId = query.animeId;
+    const page = query.page;
     const perPage = 20;
 
     const [comments, total] = await app.prisma.$transaction([
@@ -29,7 +35,10 @@ export const commentsRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // POST /api/comments
-  app.post('/', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/', {
+    preHandler: requireAuth,
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const body = createCommentSchema.parse(request.body);
     const user = await app.prisma.user.findUnique({ where: { clerkId: request.userId! } });
     if (!user) return reply.status(404).send({ error: 'Utilisateur introuvable' });
@@ -46,6 +55,9 @@ export const commentsRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Params: { id: string } }>('/:id/like', { preHandler: requireAuth }, async (request, reply) => {
     const user = await app.prisma.user.findUnique({ where: { clerkId: request.userId! } });
     if (!user) return reply.status(404).send({ error: 'Utilisateur introuvable' });
+
+    const comment = await app.prisma.comment.findUnique({ where: { id: request.params.id } });
+    if (!comment) return reply.status(404).send({ error: 'Commentaire introuvable' });
 
     const existing = await app.prisma.commentLike.findUnique({
       where: { userId_commentId: { userId: user.id, commentId: request.params.id } },
