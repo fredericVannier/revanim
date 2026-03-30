@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "revAnim",
+    "slug": "revanim",
+    "scheme": "revanim",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": { "resizeMode": "contain", "backgroundColor": "#0A0A14" },
+    "ios": { "supportsTablet": false, "bundleIdentifier": "com.revanim.app" },
+    "android": { "adaptiveIcon": { "backgroundColor": "#0A0A14" }, "package": "com.revanim.app" },
+    "plugins": ["expo-router", "expo-secure-store"]
+  }
+}

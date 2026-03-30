@@ -1,0 +1,32 @@
+node_modules/
+dist/
+.turbo/
+.expo/
+*.tsbuildinfo
+
+# Env
+.env
+.env.local
+.env.production
+
+# Prisma
+apps/api/prisma/migrations/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build
+*.js.map
+*.d.ts.map
+
+# EAS
+*.ipa
+*.apk
+*.aab
