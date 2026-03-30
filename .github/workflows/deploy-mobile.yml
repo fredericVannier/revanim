@@ -1,0 +1,50 @@
+# Secrets GitHub requis :
+#   EXPO_TOKEN — Token d'accès Expo (expo.dev > Account Settings > Access Tokens)
+#
+# Ce workflow se déclenche sur la création d'un tag sémantique (ex: v1.0.0, v2.3.1).
+# Il lance un build EAS pour iOS et Android simultanément.
+
+name: Deploy Mobile (EAS)
+
+on:
+  push:
+    tags:
+      - v*.*.*
+
+concurrency:
+  group: deploy-mobile-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: EAS Build (iOS + Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: EAS Build
+        working-directory: apps/mobile
+        run: eas build --platform all --non-interactive

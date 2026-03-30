@@ -11,18 +11,104 @@
 - Fonctionnalités : favoris, wishlist, coups de cœur, commentaires, partage social
 - Langues supportées : FR / EN / ES
 - Statut : En développement actif
+- GitHub : `github.com/fredericVannier/revanim`
 
 ---
 
 ## 🛠️ Stack Technique
 
-| Couche | Technologie |
+| Couche | Technologie | Détail |
+|--------|-------------|--------|
+| Mobile | Expo + React Native | Expo Router (file-based routing) |
+| Backend | Fastify + TypeScript | API REST, plugins prisma/clerk/redis |
+| ORM | Prisma v5 | Schéma dans `apps/api/prisma/schema.prisma` |
+| Base de données | PostgreSQL | Hébergé Railway |
+| Cache / Queue | BullMQ + Redis | Hébergé Railway, sync AniList 24h |
+| Auth | Clerk | `@clerk/fastify` + `@clerk/clerk-expo` |
+| API externe | AniList GraphQL | Cache-aside : Redis → PostgreSQL → AniList |
+| Monorepo | pnpm + Turborepo | Workspaces : `apps/*`, `packages/*` |
+| Déploiement | Railway (API+DB+Redis) + EAS (mobile) | |
+| Internationalisation | i18n (FR/EN/ES) | À implémenter |
+
+---
+
+## 📁 Structure du monorepo
+
+```
+revAnim/
+├── apps/
+│   ├── api/                  ← Fastify backend
+│   │   ├── prisma/
+│   │   │   ├── schema.prisma
+│   │   │   └── migrations/   ← Migration init appliquée ✅
+│   │   └── src/
+│   │       ├── index.ts
+│   │       ├── plugins/      (prisma, clerk, redis)
+│   │       ├── routes/       (animes, users, ratings, comments, lists, rankings)
+│   │       ├── services/     (anilist.service — cache-aside)
+│   │       ├── jobs/         (anime-sync.job — BullMQ 24h)
+│   │       └── lib/          (anilist-client GraphQL)
+│   └── mobile/               ← Expo app
+│       ├── app/
+│       │   ├── _layout.tsx   ← ClerkProvider + AuthGuard
+│       │   ├── (auth)/       ← sign-in, sign-up
+│       │   ├── (tabs)/       ← catalogue, search, my-list, profile
+│       │   └── anime/[id].tsx
+│       └── lib/api.ts        ← hook useApi() avec token Clerk
+├── packages/
+│   ├── types/                ← @revanim/types (Anime, User, Rating, Comment...)
+│   └── config/               ← ESLint + TypeScript partagés
+├── mockups/                  ← Maquettes React "Cinéma de nuit" (Figma via Anima)
+└── .env.example
+```
+
+---
+
+## 🗄️ Schéma Prisma — Modèles
+
+| Modèle | Description |
 |--------|-------------|
-| Mobile | React Native |
-| Backend | Node.js |
-| Base de données | PostgreSQL |
-| API externe | AniList API |
-| Internationalisation | i18n (FR/EN/ES) |
+| `User` | clerkId, username, avatar, bio |
+| `Anime` | anilistId, title, genres[], score, status... |
+| `Rating` | score 1-5, unique par (userId, animeId) |
+| `Comment` | content, likes, likedBy |
+| `CommentLike` | pivot userId × commentId |
+| `UserAnimeList` | type FAVORITE / WISHLIST / COUP_DE_COEUR |
+| `Badge` | key, name, description, icon (14 badges) |
+| `UserBadge` | pivot userId × badgeId |
+| `Ranking` | type WEEKLY / ALL_TIME, position |
+
+---
+
+## 🔑 Variables d'environnement
+
+Fichier `apps/api/.env` (non commité) :
+```
+DATABASE_URL        → PostgreSQL Railway (URL publique TCP pour dev local)
+REDIS_URL           → Redis Railway (URL publique TCP pour dev local)
+CLERK_SECRET_KEY    → sk_test_...
+CLERK_PUBLISHABLE_KEY → pk_test_...
+ANILIST_API_URL     → https://graphql.anilist.co
+PORT                → 3000
+```
+
+Fichier `apps/mobile/.env` (non commité) :
+```
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY → pk_test_...
+EXPO_PUBLIC_API_URL               → http://localhost:3000
+```
+
+> En production Railway, les variables internes (`.railway.internal`) sont injectées directement via le dashboard Railway — pas besoin de les commiter.
+
+---
+
+## 🎨 Design
+
+- Thème : **"Cinéma de nuit"** (dark, premium, cinématographique)
+- Palette : fond `#0A0A14`, or `#C9A84C`, violet `#7C3AED`
+- Polices : Space Grotesk (titres), DM Sans (corps)
+- Maquettes dans `mockups/` — lancer avec `cd mockups && npm run dev`
+- Import Figma via plugin **Anima**
 
 ---
 
@@ -68,7 +154,7 @@ catalogue de 14 badges (🖊️ Critique en herbe → 👑 Légende).
 ### Après chaque implémentation
 1. **Commit** avec le format : `feat|fix|chore(KAN-XX): description courte`
 2. **Mettre à jour le statut Jira** du ticket concerné via MCP Atlassian
-3. **Si nouvelle décision d'archi** → mettre à jour la page Confluence ID 884737
+3. **Si nouvelle décision d'archi** → mettre à jour ce fichier + page Confluence ID 884737
 4. **Mettre à jour** `context-sync.md` (état courant du sprint)
 
 ### Format de commit
@@ -100,3 +186,6 @@ Capacités disponibles via MCP :
 | `CLAUDE.md` | Contexte permanent (ce fichier) |
 | `context-sync.md` | État courant du sprint — mis à jour par Claude Code |
 | `.claude/mcp.json` | Configuration MCP Atlassian |
+| `apps/api/prisma/schema.prisma` | Source de vérité du schéma DB |
+| `packages/types/src/` | Types TypeScript partagés mobile ↔ backend |
+| `mockups/` | Maquettes UI Figma |

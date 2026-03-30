@@ -4,8 +4,9 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint",
-    "type-check": "turbo type-check",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run type-check",
+    "type-check": "turbo run type-check",
     "db:generate": "turbo db:generate",
     "db:push": "turbo db:push",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json}\""
