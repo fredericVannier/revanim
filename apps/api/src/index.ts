@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
+import { ZodError } from 'zod';
 import { prismaPlugin } from './plugins/prisma';
 import { clerkPlugin } from './plugins/clerk';
 import { redisPlugin } from './plugins/redis';
@@ -46,6 +47,14 @@ async function bootstrap() {
   await app.register(commentsRoutes, { prefix: '/api/comments' });
   await app.register(listsRoutes, { prefix: '/api/lists' });
   await app.register(rankingsRoutes, { prefix: '/api/rankings' });
+
+  // Gestion des erreurs Zod → 400
+  app.setErrorHandler((error, _request, reply) => {
+    if (error instanceof ZodError) {
+      return reply.status(400).send({ error: 'Paramètres invalides', details: error.errors });
+    }
+    reply.send(error);
+  });
 
   // Health check
   app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));

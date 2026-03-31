@@ -6,13 +6,48 @@
 ---
 
 ## 🗓️ Dernière mise à jour
-2026-03-30 — Fin de session
+2026-03-31 — Session en cours
 
 ---
 
 ## 🏃 Sprint en cours
 **Sprint 1 — Infrastructure & Architecture** ✅ TERMINÉ
-**Sprint 2 — Features core mobile** → À démarrer
+**Sprint 2 — Features core mobile** ✅ TERMINÉ
+**Sprint 3 — Catalogue avancé + Classements + Badges** → En cours
+
+---
+
+## ✅ Réalisé (Done) — Session du 2026-03-31
+
+### Seed DB
+- ✅ `prisma/seed.ts` — 14 badges + 50 animes populaires AniList (upsert idempotent)
+- ✅ Seed exécuté en production
+
+### Auth mobile (KAN-33/34/36)
+- ✅ KAN-33 — Écran sign-up (email + username + password + vérification email)
+- ✅ KAN-34 — Écran sign-in (email + password)
+- ✅ KAN-36 — Déconnexion depuis le profil
+- ✅ Layout tabs skeleton (Catalogue, Recherche, Ma liste, Profil)
+- ✅ `@types/node` ajouté au mobile, typecheck clean
+
+### Catalogue & Détail (KAN-43/44/47)
+- ✅ KAN-43 — HomeScreen catalogue avec infinite scroll
+- ✅ KAN-44 — Recherche par titre
+- ✅ KAN-47 — AnimeDetailScreen (banner, cover, stats, genres, synopsis)
+- ✅ Composant `AnimeCard` réutilisable
+
+### Notation & Commentaires (KAN-48/49/51)
+- ✅ KAN-48 — Notation étoiles 1-5 (upsert)
+- ✅ KAN-49 — Écriture de commentaire
+- ✅ KAN-51 — Like/unlike commentaire (toggle)
+- ✅ Composants `StarRating` et `CommentItem`
+
+### Profil (KAN-37 à KAN-42)
+- ✅ KAN-37 — Profil avec stats (notes, listes, badges)
+- ✅ KAN-38/39/40 — Favoris / Wishlist / Coups de cœur (toggle depuis le détail)
+- ✅ KAN-41 — Historique ratings : endpoint `GET /api/ratings/mine`
+- ✅ KAN-42 — Édition profil (username, bio, avatar URL)
+- ✅ Écran "Ma liste" avec tabs Favoris / Wishlist / Coups de cœur
 
 ---
 
@@ -55,35 +90,25 @@
 
 ## 🔜 Prochaines étapes (Sprint 2)
 
-### Priorité 1 — Seed base de données
-- [ ] Seeder les 14 badges (`prisma/seed.ts`)
-- [ ] Pré-charger un batch d'animes populaires depuis AniList
+### Priorité 1 — Catalogue avancé (KAN-27)
+- [ ] KAN-45 — Filtrer par genre
+- [ ] KAN-46 — Filtrer par année / statut
 
-### Priorité 2 — Auth mobile (KAN-25)
-- [ ] KAN-33 — Écran sign-in avec Clerk (`app/(auth)/sign-in.tsx`)
-- [ ] KAN-34 — Écran sign-up avec Clerk (`app/(auth)/sign-up.tsx`)
-- [ ] KAN-36 — Déconnexion
+### Priorité 2 — Classements (KAN-29)
+- [ ] KAN-53 — Top animes hebdo / all-time
+- [ ] KAN-54 — Classements communautaires
+- [ ] KAN-55 — Tendances
+- [ ] KAN-56 — Recommandations
 
-### Priorité 3 — Écrans mobiles branchés sur l'API (KAN-27)
-- [ ] KAN-43 — HomeScreen branché sur `GET /api/animes`
-- [ ] KAN-44 — Recherche par titre (`GET /api/animes?q=`)
-- [ ] KAN-47 — AnimeDetailScreen branché sur `GET /api/animes/:id`
-
-### Priorité 4 — Notation & Commentaires (KAN-28)
-- [ ] KAN-48 — Notation étoiles 1-5 (`POST /api/ratings`)
-- [ ] KAN-49 — Écriture commentaire (`POST /api/comments`)
-- [ ] KAN-51 — Like commentaire (`POST /api/comments/:id/like`)
+### Priorité 3 — Badges & Trophées (KAN-69)
+- [ ] KAN-70 — Affichage badges
+- [ ] KAN-71 — Notifications badge gagné
+- [ ] KAN-72 — Moteur d'attribution back-end
+- [ ] KAN-73 — Catalogue badges
 
 ---
 
 ## 📥 Backlog restant
-
-### Profil (KAN-26)
-- KAN-37 à KAN-42 — Profil, favoris, wishlist, coups de cœur, historique, avatar
-
-### Catalogue (KAN-27)
-- KAN-45 — Filtrer par genre
-- KAN-46 — Filtrer par année / statut
 
 ### Classements (KAN-29)
 - KAN-53 à KAN-56 — Top animes, classements, tendances, recommandations
