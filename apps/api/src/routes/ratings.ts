@@ -13,6 +13,20 @@ const ratingsQuerySchema = z.object({
 });
 
 export const ratingsRoutes: FastifyPluginAsync = async (app) => {
+  // GET /api/ratings/mine — historique de notation de l'utilisateur connecté
+  app.get('/mine', { preHandler: requireAuth }, async (request) => {
+    const user = await app.prisma.user.findUnique({ where: { clerkId: request.userId! } });
+    if (!user) throw { statusCode: 404, message: 'Utilisateur introuvable' };
+
+    const ratings = await app.prisma.rating.findMany({
+      where: { userId: user.id },
+      include: { anime: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return ratings;
+  });
+
   // POST /api/ratings
   app.post('/', { preHandler: requireAuth }, async (request, reply) => {
     const body = createRatingSchema.parse(request.body);

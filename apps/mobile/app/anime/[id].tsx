@@ -25,6 +25,8 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Annulé',
 };
 
+type ListType = 'FAVORITE' | 'WISHLIST' | 'COUP_DE_COEUR';
+
 type CommentsResponse = {
   comments: CommentData[];
   total: number;
@@ -47,6 +49,10 @@ export default function AnimeDetailScreen() {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingAvg, setRatingAvg] = useState<{ average: number | null; count: number } | null>(null);
 
+  // Lists
+  const [userLists, setUserLists] = useState<Set<ListType>>(new Set());
+  const [togglingList, setTogglingList] = useState<ListType | null>(null);
+
   // Comments
   const [comments, setComments] = useState<CommentData[]>([]);
   const [commentText, setCommentText] = useState('');
@@ -60,6 +66,7 @@ export default function AnimeDetailScreen() {
         setAnime(a);
         fetchComments(a.id);
         fetchRatings(a.id);
+        fetchUserLists(a.id);
       })
       .catch(() => setError('Anime introuvable'))
       .finally(() => setLoadingAnime(false));
@@ -84,6 +91,33 @@ export default function AnimeDetailScreen() {
       setRatingAvg({ average: res.average, count: res.count });
     } catch {
       // silently ignore
+    }
+  }
+
+  async function fetchUserLists(animeId: string) {
+    try {
+      const items = await api.get<{ anime: { id: string }; type: ListType }[]>('/api/lists');
+      const types = new Set(
+        items.filter((i) => i.anime.id === animeId).map((i) => i.type),
+      );
+      setUserLists(types);
+    } catch {
+      // silently ignore
+    }
+  }
+
+  async function handleToggleList(type: ListType) {
+    if (!anime) return;
+    setTogglingList(type);
+    try {
+      await api.post('/api/lists', { animeId: anime.id, type });
+      setUserLists((prev) => {
+        const next = new Set(prev);
+        if (next.has(type)) next.delete(type); else next.add(type);
+        return next;
+      });
+    } finally {
+      setTogglingList(null);
     }
   }
 
@@ -225,6 +259,38 @@ export default function AnimeDetailScreen() {
                 <Text style={styles.synopsis}>{anime.synopsis}</Text>
               </View>
             )}
+
+            {/* Liste buttons — KAN-38/39/40 */}
+            <View style={styles.listButtons}>
+              {(
+                [
+                  { type: 'FAVORITE', icon: '❤️', label: 'Favori' },
+                  { type: 'WISHLIST', icon: '📋', label: 'Wishlist' },
+                  { type: 'COUP_DE_COEUR', icon: '💎', label: 'Coup de cœur' },
+                ] as { type: ListType; icon: string; label: string }[]
+              ).map(({ type, icon, label }) => {
+                const active = userLists.has(type);
+                return (
+                  <Pressable
+                    key={type}
+                    style={[styles.listBtn, active && styles.listBtnActive]}
+                    onPress={() => handleToggleList(type)}
+                    disabled={togglingList === type}
+                  >
+                    {togglingList === type ? (
+                      <ActivityIndicator color="#C9A84C" size="small" />
+                    ) : (
+                      <>
+                        <Text style={styles.listBtnIcon}>{icon}</Text>
+                        <Text style={[styles.listBtnLabel, active && styles.listBtnLabelActive]}>
+                          {label}
+                        </Text>
+                      </>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
 
             {/* Rating — KAN-48 */}
             <View style={styles.section}>
@@ -411,6 +477,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontStyle: 'italic',
   },
+  listButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  listBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#1A1A2E',
+    gap: 3,
+    minHeight: 52,
+    justifyContent: 'center',
+  },
+  listBtnActive: {
+    borderColor: '#C9A84C',
+    backgroundColor: 'rgba(201,168,76,0.08)',
+  },
+  listBtnIcon: { fontSize: 16 },
+  listBtnLabel: { color: '#555570', fontSize: 10, fontWeight: '600' },
+  listBtnLabelActive: { color: '#C9A84C' },
   commentBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
