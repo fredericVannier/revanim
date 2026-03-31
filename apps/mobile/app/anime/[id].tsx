@@ -1,16 +1,21 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import type { Anime } from '@revanim/types';
+import { CommentData, CommentItem } from '../../components/CommentItem';
+import { StarRating } from '../../components/StarRating';
 import { useApi } from '../../lib/api';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -20,24 +25,112 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Annulé',
 };
 
+type CommentsResponse = {
+  comments: CommentData[];
+  total: number;
+  page: number;
+  hasNextPage: boolean;
+};
+
 export default function AnimeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const api = useApi();
   const router = useRouter();
+  const scrollRef = useRef<ScrollView>(null);
 
   const [anime, setAnime] = useState<Anime | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingAnime, setLoadingAnime] = useState(true);
   const [error, setError] = useState('');
+
+  // Rating
+  const [userRating, setUserRating] = useState(0);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [ratingAvg, setRatingAvg] = useState<{ average: number | null; count: number } | null>(null);
+
+  // Comments
+  const [comments, setComments] = useState<CommentData[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [sendingComment, setSendingComment] = useState(false);
+  const [likingId, setLikingId] = useState<string | null>(null);
 
   useEffect(() => {
     api
       .get<Anime>(`/api/animes/${id}`)
-      .then(setAnime)
+      .then((a) => {
+        setAnime(a);
+        fetchComments(a.id);
+        fetchRatings(a.id);
+      })
       .catch(() => setError('Anime introuvable'))
-      .finally(() => setLoading(false));
+      .finally(() => setLoadingAnime(false));
   }, [id]);
 
-  if (loading) {
+  async function fetchComments(animeId: string) {
+    try {
+      const res = await api.get<CommentsResponse>(
+        `/api/comments?animeId=${animeId}&page=1`,
+      );
+      setComments(res.comments);
+    } catch {
+      // silently ignore
+    }
+  }
+
+  async function fetchRatings(animeId: string) {
+    try {
+      const res = await api.get<{ average: number | null; count: number }>(
+        `/api/ratings?animeId=${animeId}&page=1`,
+      );
+      setRatingAvg({ average: res.average, count: res.count });
+    } catch {
+      // silently ignore
+    }
+  }
+
+  async function handleRate(score: number) {
+    if (!anime) return;
+    setRatingLoading(true);
+    try {
+      await api.post('/api/ratings', { animeId: anime.id, score });
+      setUserRating(score);
+      await fetchRatings(anime.id);
+    } finally {
+      setRatingLoading(false);
+    }
+  }
+
+  async function handleSendComment() {
+    if (!anime || !commentText.trim()) return;
+    setSendingComment(true);
+    try {
+      const newComment = await api.post<CommentData>('/api/comments', {
+        animeId: anime.id,
+        content: commentText.trim(),
+      });
+      setComments((prev) => [newComment, ...prev]);
+      setCommentText('');
+    } finally {
+      setSendingComment(false);
+    }
+  }
+
+  async function handleLike(commentId: string) {
+    setLikingId(commentId);
+    try {
+      await api.post(`/api/comments/${commentId}/like`, {});
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === commentId
+            ? { ...c, likes: c.likes + 1 }
+            : c,
+        ),
+      );
+    } finally {
+      setLikingId(null);
+    }
+  }
+
+  if (loadingAnime) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator color="#C9A84C" size="large" />
@@ -55,89 +148,141 @@ export default function AnimeDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
-        {/* Banner / Cover */}
-        <View style={styles.bannerContainer}>
-          {anime.bannerImage ? (
-            <Image source={{ uri: anime.bannerImage }} style={styles.banner} />
-          ) : anime.coverImage ? (
-            <Image source={{ uri: anime.coverImage }} style={styles.banner} blurRadius={8} />
-          ) : (
-            <View style={[styles.banner, styles.bannerPlaceholder]} />
-          )}
-          <View style={styles.bannerOverlay} />
-
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backText}>←</Text>
-          </Pressable>
-
-          {anime.coverImage && (
-            <Image source={{ uri: anime.coverImage }} style={styles.cover} />
-          )}
-        </View>
-
-        <View style={styles.content}>
-          <Text style={styles.title}>{anime.title}</Text>
-          {anime.titleJapanese && (
-            <Text style={styles.titleJa}>{anime.titleJapanese}</Text>
-          )}
-
-          {/* Stats row */}
-          <View style={styles.stats}>
-            {anime.score != null && (
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>★ {anime.score.toFixed(1)}</Text>
-                <Text style={styles.statLabel}>Score</Text>
-              </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView ref={scrollRef}>
+          {/* Banner */}
+          <View style={styles.bannerContainer}>
+            {anime.bannerImage ? (
+              <Image source={{ uri: anime.bannerImage }} style={styles.banner} />
+            ) : anime.coverImage ? (
+              <Image source={{ uri: anime.coverImage }} style={styles.banner} blurRadius={8} />
+            ) : (
+              <View style={[styles.banner, styles.bannerPlaceholder]} />
             )}
-            {anime.episodes != null && (
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>{anime.episodes}</Text>
-                <Text style={styles.statLabel}>Épisodes</Text>
-              </View>
+            <View style={styles.bannerOverlay} />
+
+            <Pressable style={styles.backButton} onPress={() => router.back()}>
+              <Text style={styles.backText}>←</Text>
+            </Pressable>
+
+            {anime.coverImage && (
+              <Image source={{ uri: anime.coverImage }} style={styles.cover} />
             )}
-            {anime.year && (
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>{anime.year}</Text>
-                <Text style={styles.statLabel}>Année</Text>
-              </View>
-            )}
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{STATUS_LABELS[anime.status] ?? anime.status}</Text>
-              <Text style={styles.statLabel}>Statut</Text>
-            </View>
           </View>
 
-          {/* Genres */}
-          {anime.genres.length > 0 && (
-            <View style={styles.genres}>
-              {anime.genres.map((g) => (
-                <View key={g} style={styles.genreTag}>
-                  <Text style={styles.genreText}>{g}</Text>
+          <View style={styles.content}>
+            {/* Title */}
+            <Text style={styles.title}>{anime.title}</Text>
+            {anime.titleJapanese && (
+              <Text style={styles.titleJa}>{anime.titleJapanese}</Text>
+            )}
+
+            {/* Stats */}
+            <View style={styles.stats}>
+              {ratingAvg?.average != null && (
+                <View style={styles.stat}>
+                  <Text style={styles.statValue}>★ {ratingAvg.average.toFixed(1)}</Text>
+                  <Text style={styles.statLabel}>{ratingAvg.count} avis</Text>
                 </View>
-              ))}
+              )}
+              {anime.episodes != null && (
+                <View style={styles.stat}>
+                  <Text style={styles.statValue}>{anime.episodes}</Text>
+                  <Text style={styles.statLabel}>Épisodes</Text>
+                </View>
+              )}
+              {anime.year && (
+                <View style={styles.stat}>
+                  <Text style={styles.statValue}>{anime.year}</Text>
+                  <Text style={styles.statLabel}>Année</Text>
+                </View>
+              )}
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{STATUS_LABELS[anime.status] ?? anime.status}</Text>
+                <Text style={styles.statLabel}>Statut</Text>
+              </View>
             </View>
-          )}
 
-          {/* Synopsis */}
-          {anime.synopsis && (
+            {/* Genres */}
+            {anime.genres.length > 0 && (
+              <View style={styles.genres}>
+                {anime.genres.map((g) => (
+                  <View key={g} style={styles.genreTag}>
+                    <Text style={styles.genreText}>{g}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Synopsis */}
+            {anime.synopsis && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Synopsis</Text>
+                <Text style={styles.synopsis}>{anime.synopsis}</Text>
+              </View>
+            )}
+
+            {/* Rating — KAN-48 */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Synopsis</Text>
-              <Text style={styles.synopsis}>{anime.synopsis}</Text>
+              <Text style={styles.sectionTitle}>Ta note</Text>
+              <StarRating
+                value={userRating}
+                onChange={handleRate}
+                loading={ratingLoading}
+              />
+              {ratingLoading && (
+                <ActivityIndicator color="#C9A84C" size="small" style={{ marginTop: 4 }} />
+              )}
             </View>
-          )}
 
-          {/* Placeholder actions — KAN-48/49 */}
-          <View style={styles.actions}>
-            <Pressable style={styles.rateButton}>
-              <Text style={styles.rateButtonText}>★ Noter</Text>
-            </Pressable>
-            <Pressable style={styles.listButton}>
-              <Text style={styles.listButtonText}>+ Ma liste</Text>
-            </Pressable>
+            {/* Comments — KAN-49 */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Commentaires ({comments.length})</Text>
+
+              {comments.map((c) => (
+                <CommentItem
+                  key={c.id}
+                  comment={c}
+                  onLike={handleLike}
+                  liking={likingId === c.id}
+                />
+              ))}
+
+              {comments.length === 0 && (
+                <Text style={styles.empty}>Sois le premier à commenter !</Text>
+              )}
+            </View>
           </View>
+        </ScrollView>
+
+        {/* Comment input bar — KAN-49 */}
+        <View style={styles.commentBar}>
+          <TextInput
+            style={styles.commentInput}
+            placeholder="Ton commentaire..."
+            placeholderTextColor="#555570"
+            value={commentText}
+            onChangeText={setCommentText}
+            multiline
+            maxLength={1000}
+          />
+          <Pressable
+            style={[styles.sendButton, (!commentText.trim() || sendingComment) && styles.sendDisabled]}
+            onPress={handleSendComment}
+            disabled={!commentText.trim() || sendingComment}
+          >
+            {sendingComment ? (
+              <ActivityIndicator color="#0A0A14" size="small" />
+            ) : (
+              <Text style={styles.sendText}>↑</Text>
+            )}
+          </Pressable>
         </View>
-      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -200,7 +345,7 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: 52,
     paddingHorizontal: 16,
-    paddingBottom: 32,
+    paddingBottom: 16,
     gap: 16,
   },
   title: {
@@ -249,7 +394,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   section: {
-    gap: 8,
+    gap: 10,
   },
   sectionTitle: {
     color: '#FFFFFF',
@@ -261,34 +406,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+  empty: {
+    color: '#555570',
+    fontSize: 13,
+    fontStyle: 'italic',
   },
-  rateButton: {
+  commentBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#1A1A2E',
+    backgroundColor: '#0A0A14',
+    gap: 10,
+  },
+  commentInput: {
     flex: 1,
+    backgroundColor: '#12121F',
+    borderWidth: 1,
+    borderColor: '#1A1A2E',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    color: '#FFFFFF',
+    fontSize: 14,
+    maxHeight: 100,
+  },
+  sendButton: {
     backgroundColor: '#C9A84C',
     borderRadius: 12,
-    paddingVertical: 14,
+    width: 42,
+    height: 42,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  rateButtonText: {
+  sendDisabled: {
+    opacity: 0.4,
+  },
+  sendText: {
     color: '#0A0A14',
+    fontSize: 20,
     fontWeight: '700',
-    fontSize: 15,
-  },
-  listButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#7C3AED',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  listButtonText: {
-    color: '#7C3AED',
-    fontWeight: '700',
-    fontSize: 15,
   },
 });
