@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireAuth } from '../plugins/clerk';
 import type { ListType } from '@prisma/client';
+import { checkAndAwardBadges } from '../services/badges.service';
 
 const listSchema = z.object({
   animeId: z.string(),
@@ -44,6 +45,9 @@ export const listsRoutes: FastifyPluginAsync = async (app) => {
       data: { userId: user.id, animeId: body.animeId, type: body.type },
     });
 
-    return reply.status(201).send({ added: true, type: body.type });
+    const context = body.type === 'FAVORITE' ? 'list_favorite' : body.type === 'WISHLIST' ? 'list_wishlist' : undefined;
+    const newBadges = context ? await checkAndAwardBadges(user.id, context, app.prisma) : [];
+
+    return reply.status(201).send({ added: true, type: body.type, newBadges });
   });
 };

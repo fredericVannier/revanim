@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireAuth } from '../plugins/clerk';
+import { checkAndAwardBadges } from '../services/badges.service';
 
 const createCommentSchema = z.object({
   animeId: z.string(),
@@ -48,7 +49,8 @@ export const commentsRoutes: FastifyPluginAsync = async (app) => {
       include: { user: { select: { username: true, avatar: true } } },
     });
 
-    return reply.status(201).send(comment);
+    const newBadges = await checkAndAwardBadges(user.id, 'comment', app.prisma);
+    return reply.status(201).send({ comment, newBadges });
   });
 
   // POST /api/comments/:id/like

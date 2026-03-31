@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireAuth } from '../plugins/clerk';
+import { checkAndAwardBadges } from '../services/badges.service';
 
 const updateProfileSchema = z.object({
   username: z.string().min(3).max(30).optional(),
@@ -35,7 +36,8 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
       },
     });
 
-    return user;
+    const newBadges = await checkAndAwardBadges(user.id, 'profile', app.prisma);
+    return { ...user, newBadges };
   });
 
   // GET /api/users/:username (profil public)

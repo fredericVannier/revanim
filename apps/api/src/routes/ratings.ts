@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireAuth } from '../plugins/clerk';
+import { checkAndAwardBadges } from '../services/badges.service';
 
 const createRatingSchema = z.object({
   animeId: z.string(),
@@ -40,7 +41,9 @@ export const ratingsRoutes: FastifyPluginAsync = async (app) => {
       create: { userId: user.id, animeId: body.animeId, score: body.score },
     });
 
-    return reply.status(201).send(rating);
+    const newBadges = await checkAndAwardBadges(user.id, 'rating', app.prisma, { score: body.score });
+
+    return reply.status(201).send({ rating, newBadges });
   });
 
   // GET /api/ratings?animeId=xxx&page=1

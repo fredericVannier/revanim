@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import type { Anime } from '@revanim/types';
 import { CommentData, CommentItem } from '../../components/CommentItem';
+import { BadgeEarnedModal, NewBadge } from '../../components/BadgeEarnedModal';
 import { StarRating } from '../../components/StarRating';
 import { useApi } from '../../lib/api';
 
@@ -48,6 +49,9 @@ export default function AnimeDetailScreen() {
   const [userRating, setUserRating] = useState(0);
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingAvg, setRatingAvg] = useState<{ average: number | null; count: number } | null>(null);
+
+  // Badges
+  const [newBadges, setNewBadges] = useState<NewBadge[]>([]);
 
   // Lists
   const [userLists, setUserLists] = useState<Set<ListType>>(new Set());
@@ -125,8 +129,9 @@ export default function AnimeDetailScreen() {
     if (!anime) return;
     setRatingLoading(true);
     try {
-      await api.post('/api/ratings', { animeId: anime.id, score });
+      const res = await api.post<{ rating: unknown; newBadges: NewBadge[] }>('/api/ratings', { animeId: anime.id, score });
       setUserRating(score);
+      if (res.newBadges?.length) setNewBadges(res.newBadges);
       await fetchRatings(anime.id);
     } finally {
       setRatingLoading(false);
@@ -137,11 +142,12 @@ export default function AnimeDetailScreen() {
     if (!anime || !commentText.trim()) return;
     setSendingComment(true);
     try {
-      const newComment = await api.post<CommentData>('/api/comments', {
+      const res = await api.post<{ comment: CommentData; newBadges: NewBadge[] }>('/api/comments', {
         animeId: anime.id,
         content: commentText.trim(),
       });
-      setComments((prev) => [newComment, ...prev]);
+      setComments((prev) => [res.comment, ...prev]);
+      if (res.newBadges?.length) setNewBadges(res.newBadges);
       setCommentText('');
     } finally {
       setSendingComment(false);
@@ -182,6 +188,9 @@ export default function AnimeDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {newBadges.length > 0 && (
+        <BadgeEarnedModal badges={newBadges} onDismiss={() => setNewBadges([])} />
+      )}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

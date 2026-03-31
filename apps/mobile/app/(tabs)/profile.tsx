@@ -1,5 +1,5 @@
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -132,19 +132,26 @@ export default function ProfileScreen() {
         </View>
 
         {/* Badges */}
-        {profile.badges.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Badges</Text>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Badges ({profile.badges.length})</Text>
+            <Link href="/badges" asChild>
+              <Pressable><Text style={styles.seeAll}>Voir tout →</Text></Pressable>
+            </Link>
+          </View>
+          {profile.badges.length > 0 ? (
             <View style={styles.badgesRow}>
-              {profile.badges.map(({ badge }) => (
+              {profile.badges.slice(0, 6).map(({ badge }) => (
                 <View key={badge.key} style={styles.badgeChip}>
                   <Text style={styles.badgeIcon}>{badge.icon}</Text>
                   <Text style={styles.badgeName}>{badge.name}</Text>
                 </View>
               ))}
             </View>
-          </View>
-        )}
+          ) : (
+            <Text style={styles.bioPh}>Aucun badge encore — note un anime !</Text>
+          )}
+        </View>
 
         {/* Edit form — KAN-42 */}
         {editing ? (
@@ -243,6 +250,8 @@ const styles = StyleSheet.create({
   section: { gap: 12 },
   sectionTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  seeAll: { color: '#C9A84C', fontSize: 12, fontWeight: '600' },
   badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   badgeChip: {
     flexDirection: 'row',
