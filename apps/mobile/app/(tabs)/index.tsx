@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import type { Anime } from '@revanim/types';
 import { AnimeCard } from '../../components/AnimeCard';
 import { useApi } from '../../lib/api';
@@ -21,6 +23,7 @@ type PagedResponse = {
 
 export default function CatalogueScreen() {
   const api = useApi();
+  const router = useRouter();
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [page, setPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(true);
@@ -58,6 +61,9 @@ export default function CatalogueScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Catalogue</Text>
+        <Pressable style={styles.rankingsBtn} onPress={() => router.push('/rankings')}>
+          <Text style={styles.rankingsBtnText}>🏆 Classements</Text>
+        </Pressable>
       </View>
 
       {error ? (
@@ -88,11 +94,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   title: {
     color: '#C9A84C',
     fontSize: 28,
     fontWeight: '700',
+  },
+  rankingsBtn: {
+    backgroundColor: '#12121F',
+    borderWidth: 1,
+    borderColor: '#1A1A2E',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  rankingsBtnText: {
+    color: '#C9A84C',
+    fontSize: 12,
+    fontWeight: '600',
   },
   list: {
     paddingBottom: 16,
