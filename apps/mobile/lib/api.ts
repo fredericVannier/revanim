@@ -5,27 +5,37 @@ if (!BASE_URL) {
   throw new Error('EXPO_PUBLIC_API_URL est requis');
 }
 
+const TIMEOUT_MS = 10_000;
+
 export function useApi() {
   const { getToken } = useAuth();
 
   async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const token = await getToken();
 
-    const response = await fetch(`${BASE_URL}${path}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers,
-      },
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Erreur réseau' }));
-      throw new Error(error.message ?? `HTTP ${response.status}`);
+    try {
+      const response = await fetch(`${BASE_URL}${path}`, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+          ...options.headers,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Erreur réseau' }));
+        throw new Error(error.message ?? `HTTP ${response.status}`);
+      }
+
+      return response.json() as Promise<T>;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    return response.json() as Promise<T>;
   }
 
   return {

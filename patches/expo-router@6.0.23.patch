@@ -1,0 +1,24 @@
+diff --git a/ios/ExpoHead.podspec b/ios/ExpoHead.podspec
+index 4205de5bcc1710da7b57439ac7c5cbe3b2f5f814..86c2aeb56c65164e002237957836c3cb712022c9 100644
+--- a/ios/ExpoHead.podspec
++++ b/ios/ExpoHead.podspec
+@@ -27,15 +27,17 @@ Pod::Spec.new do |s|
+ 
+   s.dependency 'ExpoModulesCore'
+ 
+-  add_dependency(s, "RNScreens")
+-
+   # Swift/Objective-C compatibility
++  # pod_target_xcconfig must be set before add_dependency is called,
++  # otherwise ReactNativePodsUtils.add_dependency fails with nil['HEADER_SEARCH_PATHS'] (RN 0.76+)
+   s.pod_target_xcconfig = {
+     'DEFINES_MODULE' => 'YES',
+     'SWIFT_COMPILATION_MODE' => 'wholemodule',
+     'OTHER_SWIFT_FLAGS' => "$(inherited) #{compiler_flags}",
+   }
+ 
++  add_dependency(s, "RNScreens")
++
+   if !$ExpoUseSources&.include?(package['name']) && ENV['EXPO_USE_SOURCE'].to_i == 0 && File.exist?("#{s.name}.xcframework") && Gem::Version.new(Pod::VERSION) >= Gem::Version.new('1.10.0')
+     s.source_files = "**/*.h"
+     s.vendored_frameworks = "#{s.name}.xcframework"

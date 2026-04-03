@@ -19,5 +19,16 @@
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "expo-auth-session": "~6.0.3",
+      "expo-crypto": "~14.0.2",
+      "expo-secure-store": "~14.0.1",
+      "expo-web-browser": "~14.0.2"
+    },
+    "patchedDependencies": {
+      "react-native-screens@4.24.0": "patches/react-native-screens@4.24.0.patch"
+    }
+  }
 }

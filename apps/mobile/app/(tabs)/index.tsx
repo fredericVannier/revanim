@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -23,38 +23,41 @@ type PagedResponse = {
 
 export default function CatalogueScreen() {
   const api = useApi();
+  const apiRef = useRef(api);
+  apiRef.current = api;
+
   const router = useRouter();
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [page, setPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const loadingRef = useRef(false);
 
-  const fetchPage = useCallback(
-    async (p: number, reset = false) => {
-      if (loading) return;
-      setLoading(true);
-      setError('');
-      try {
-        const res = await api.get<PagedResponse>(`/api/animes?page=${p}&perPage=20`);
-        setAnimes((prev) => (reset ? res.data : [...prev, ...res.data]));
-        setHasNextPage(res.hasNextPage);
-        setPage(p);
-      } catch {
-        setError('Impossible de charger le catalogue');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [loading],
-  );
+  const fetchPage = useCallback(async (p: number, reset = false) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await apiRef.current.get<PagedResponse>(`/api/animes?page=${p}&perPage=20`);
+      setAnimes((prev) => (reset ? res.data : [...prev, ...res.data]));
+      setHasNextPage(res.hasNextPage);
+      setPage(p);
+    } catch {
+      setError('Impossible de charger le catalogue');
+    } finally {
+      loadingRef.current = false;
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchPage(1, true);
   }, []);
 
   function loadMore() {
-    if (hasNextPage && !loading) fetchPage(page + 1);
+    if (hasNextPage && !loadingRef.current) fetchPage(page + 1);
   }
 
   return (
@@ -67,7 +70,12 @@ export default function CatalogueScreen() {
       </View>
 
       {error ? (
-        <Text style={styles.error}>{error}</Text>
+        <View style={styles.errorContainer}>
+          <Text style={styles.error}>{error}</Text>
+          <Pressable style={styles.retryBtn} onPress={() => fetchPage(1, true)}>
+            <Text style={styles.retryText}>Réessayer</Text>
+          </Pressable>
+        </View>
       ) : (
         <FlatList
           data={animes}
@@ -122,10 +130,25 @@ const styles = StyleSheet.create({
   loader: {
     marginVertical: 20,
   },
+  errorContainer: {
+    alignItems: 'center',
+    marginTop: 40,
+    gap: 16,
+  },
   error: {
     color: '#FF6B6B',
     textAlign: 'center',
-    marginTop: 40,
+    fontSize: 14,
+  },
+  retryBtn: {
+    backgroundColor: '#C9A84C',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryText: {
+    color: '#0A0A14',
+    fontWeight: '700',
     fontSize: 14,
   },
 });

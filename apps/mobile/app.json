@@ -7,9 +7,36 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "splash": { "resizeMode": "contain", "backgroundColor": "#0A0A14" },
-    "ios": { "supportsTablet": false, "bundleIdentifier": "com.revanim.app" },
-    "android": { "adaptiveIcon": { "backgroundColor": "#0A0A14" }, "package": "com.revanim.app" },
-    "plugins": ["expo-router", "expo-secure-store"]
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0A14"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.revanim.app",
+      "newArchEnabled": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0A14"
+      },
+      "package": "com.revanim.app",
+      "newArchEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fd496c9b-512e-4d4a-8cc9-0df9b7b273a1"
+      }
+    }
   }
 }
